@@ -1,8 +1,9 @@
 import re
 from collections import defaultdict
 import markdown
+import csv
 
-# Expressions régulières pour identifier les adresses IP et les noms de domaine
+# Identifie les adresses IP et les noms de domaine
 IP_pattern = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
 domain_pattern = re.compile(r'[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}')
 
@@ -21,10 +22,9 @@ with open("DumpFile.txt", "r") as f:
         domains = domain_pattern.findall(line)
 
         for ip in ips:
-            ip_counts[ip] += 1  # Compter toutes les occurrences d'IP
-
+            ip_counts[ip] += 1
         for domain in domains:
-            domain_counts[domain] += 1  # Compter toutes les occurrences de domaines
+            domain_counts[domain] += 1
 
         if 'http' in line:
             compteur_http += 1
@@ -46,8 +46,6 @@ with open("DumpFile.txt", "r") as f:
         if 'ICMP' in line:
             compteur_icmp += 1
             for ip in ips: activity_ip_counts['icmp'][ip] += 1
-
-        # Ajoutez des conditions similaires pour d'autres protocoles si nécessaire
 
         if 'Flags [S]' in line:
             compteur_flags_connexion += 1
@@ -130,7 +128,7 @@ total_domain_requests = sum(domain_counts.values())
 nombre_domaines = len(domain_counts)
 moyenne_domaines = total_domain_requests / nombre_domaines if nombre_domaines > 0 else 0
 
-# Seuil pour considérer un domaine comme suspect (par exemple, 2 fois la moyenne)
+# Seuil pour considérer un domaine comme suspect
 SEUIL_DOMAINE = 3 * moyenne_domaines
 
 # Détecter les activités suspectes pour les noms de domaine
@@ -156,7 +154,7 @@ for ip, count in ip_counts.items():
     if count > SEUIL_SUSPECT:
         activites_suspectes.append("    \nIP suspecte (au-dessus de la moyenne): {} - {} requêtes".format(ip, count))
 
-# Génération du rapport en Markdown incluant les domaines
+# Génération du rapport en Markdown
 markdown_text = f'''
 # Résultats d'Analyse de Trafic
 
@@ -191,5 +189,20 @@ Nombre total de trames : {sum(ip_counts.values())}
 html_text = markdown.markdown(markdown_text)
 with open("Rapport_Analyse_Trafic.html", "w") as file:
     file.write(html_text)
+
+with open('rapport.csv', 'w', newline='') as csvfile:
+    fieldnames = ['Adresse IP', 'Requêtes IP', 'Domaine', 'Requêtes Domaine']
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+    writer.writeheader()
+
+    # Assurez-vous que les lignes suivantes sont correctement indentées
+    for ip, count in ip_counts.items():
+        writer.writerow({'Adresse IP': ip, 'Requêtes IP': count})
+
+    for domain, count in domain_counts.items():
+        writer.writerow({'Domaine': domain, 'Requêtes Domaine': count})
+
+print("Données extraites avec succès dans le fichier rapport.csv.")
 
 print("Rapport généré avec succès.")
